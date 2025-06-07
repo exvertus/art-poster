@@ -1,1 +1,4 @@
 pytest
+qrcode[pil]
+pillow
+pyzbar
