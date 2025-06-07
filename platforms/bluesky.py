@@ -22,7 +22,22 @@ def img_post(pillow_img,
              aspect_ratio='fit', 
              client=None):
     """
-    TODO: Fill this in.
+    Posts an image to Bluesky with an optional caption, alt text, and aspect ratio.
+
+    If `aspect_ratio` is set to 'fit' (default), the dimensions are inferred from the
+    provided Pillow image. Otherwise, a custom (height, width) tuple can be used.
+
+    Args:
+        pillow_img (PIL.Image.Image): The Pillow image object for determining aspect ratio.
+        image_bytes (bytes): The raw image data to upload (PNG or JPEG).
+        caption (str, optional): Text to accompany the image. Defaults to an empty string.
+        alt_text (str, optional): Alt text for accessibility. Defaults to an empty string.
+        aspect_ratio (Union[str, Tuple[int, int]], optional): 'fit' to use image dimensions, or
+            a (height, width) tuple for manual aspect ratio. Defaults to 'fit'.
+        client (atproto.Client, optional): An authenticated Bluesky client. If None, a default client is used.
+
+    Returns:
+        atproto.models.AppBskyFeedPost.Response: The response from the Bluesky post request.
     """
     if not client:
         client = get_client()

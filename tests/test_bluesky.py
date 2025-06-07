@@ -1,4 +1,3 @@
-import httpx
 import pytest
 import qrcode
 import secrets
