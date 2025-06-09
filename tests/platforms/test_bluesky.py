@@ -8,10 +8,14 @@ def test_client():
     return bluesky.get_client()
 
 @pytest.fixture
-def bluesky_post(test_client, random_qr_code):
+def caption_text():
+    return "This is a test 🔥🚀 Привет 🌍 こんにちは مرحبا"
+
+@pytest.fixture
+def bluesky_post(test_client, caption_text, random_qr_code):
     post_response = bluesky.img_post(random_qr_code["image"], 
                                      random_qr_code["bytes"], 
-                                     caption='This is a test.',
+                                     caption=caption_text,
                                      client=test_client)
     post_rkey = post_response.uri.split('/')[-1]
 
@@ -23,7 +27,7 @@ def bluesky_post(test_client, random_qr_code):
 
     test_client.delete_post(post_response.uri)
 
-def test_img_post(test_client, bluesky_post):
+def test_img_post(test_client, bluesky_post, caption_text):
     original_qr_num = bluesky_post["qr_number"]
 
     get_response = test_client.get_post(bluesky_post["post_rkey"])
@@ -35,16 +39,15 @@ def test_img_post(test_client, bluesky_post):
     )
     decoded_qr_num = decode_qr_from_bytes(blob_bytes)
 
+    assert get_response.value.text == caption_text
     assert decoded_qr_num == original_qr_num
 
 # Test TODO list:
 # - Empty caption and alt text
 # - Custom aspect ratio
 # - Invalid aspect ratio
-# - Non-QR code image fails decoding (testing test logic)
 # - image size beyond limits
 # - character amount beyond limits
 # - Multiple posts in succession
-# - non-ASCII character support
 # - Client auth error handled gracefully
 # - Missing/truncated bytes
