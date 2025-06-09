@@ -9,13 +9,18 @@ def test_client():
 
 @pytest.fixture
 def caption_text():
-    return "This is a test 🔥🚀 Привет 🌍 こんにちは مرحبا"
+    return "This is a #test 🔥🚀 Привет 🌍 こんにちは مرحبا"
 
 @pytest.fixture
-def bluesky_post(test_client, caption_text, random_qr_code):
+def alt_text():
+    return "Test QR code"
+
+@pytest.fixture
+def bluesky_post(test_client, caption_text, random_qr_code, alt_text):
     post_response = bluesky.img_post(random_qr_code["image"], 
                                      random_qr_code["bytes"], 
                                      caption=caption_text,
+                                     alt_text=alt_text,
                                      client=test_client)
     post_rkey = post_response.uri.split('/')[-1]
 
@@ -27,7 +32,7 @@ def bluesky_post(test_client, caption_text, random_qr_code):
 
     test_client.delete_post(post_response.uri)
 
-def test_img_post(test_client, bluesky_post, caption_text):
+def test_img_post(test_client, bluesky_post, caption_text, alt_text):
     original_qr_num = bluesky_post["qr_number"]
 
     get_response = test_client.get_post(bluesky_post["post_rkey"])
@@ -40,6 +45,7 @@ def test_img_post(test_client, bluesky_post, caption_text):
     decoded_qr_num = decode_qr_from_bytes(blob_bytes)
 
     assert get_response.value.text == caption_text
+    assert response_image.alt == alt_text
     assert decoded_qr_num == original_qr_num
 
 # Test TODO list:
