@@ -1,6 +1,7 @@
 import pytest
 from tests.utils.qr import decode_qr_from_bytes
 from atproto_client.exceptions import BadRequestError
+from atproto import models
 
 import platforms.bluesky as bluesky
 
@@ -76,17 +77,17 @@ def bluesky_post_too_many(test_client, caption_too_many, dummy_image, alt_text):
 @pytest.mark.integration
 @pytest.mark.driftdetect
 def test_caption_exceeds_character_limit_on_api(test_client, caption_too_many, 
-                                         dummy_image, alt_text):
-    # TODO: Call API directly here for drift-detection
+                                                dummy_image, alt_text):
+    image = dummy_image["image"]
+    aspect_ratio = models.AppBskyEmbedDefs.AspectRatio(height=image.height,
+                                                       width=image.width)
     with pytest.raises(BadRequestError):
-        bluesky.img_post(dummy_image["image"],
-                         dummy_image["bytes"],
-                         caption=caption_too_many,
-                         alt_text=alt_text,
-                         client=test_client)
+        test_client.send_image(image=dummy_image["bytes"],
+                               text=caption_too_many,
+                               image_alt=alt_text,
+                               image_aspect_ratio=aspect_ratio)
         
 def test_caption_exceeds_character_limit(caption_too_many, dummy_image, alt_text):
-    # TODO: Call API directly here for drift-detection
     with pytest.raises(ValueError):
         bluesky.img_post(dummy_image["image"],
                          dummy_image["bytes"],
