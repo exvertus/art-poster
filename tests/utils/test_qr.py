@@ -1,18 +1,13 @@
 import pytest
-from tests.utils.qr import decode_qr_from_bytes, generate_random_qr
-from PIL import Image
-from io import BytesIO
 
-def test_decode_qr_fails_on_non_qr_image():
+from tests.utils.qr import decode_qr_from_bytes, generate_random_qr
+
+def test_decode_qr_fails_on_non_qr_image(dummy_image):
     """
     Unit test that tests QR code test logic. 
     Protects against silent false-positives.
     """
-    img = Image.new('RGB', (100, 100), color='white')   # plain white image
-    buf = BytesIO()
-    img.save(buf, format='PNG')
-    buf.seek(0)
-    image_bytes = buf.read()
+    image_bytes = dummy_image["bytes"]
 
     with pytest.raises(ValueError, match="QR image failed decoding"):
         decode_qr_from_bytes(image_bytes)
