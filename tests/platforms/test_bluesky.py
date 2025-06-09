@@ -1,11 +1,13 @@
 import pytest
 from tests.utils.qr import decode_qr_from_bytes
+from atproto_client.exceptions import BadRequestError
 
 import platforms.bluesky as bluesky
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_client():
-    return bluesky.get_client()
+    client = bluesky.get_client()
+    return client
 
 @pytest.fixture
 def caption_text():
@@ -16,7 +18,7 @@ def alt_text():
     return "Test QR code"
 
 @pytest.fixture
-def bluesky_post(test_client, caption_text, random_qr_code, alt_text):
+def bluesky_post_happy(test_client, caption_text, random_qr_code, alt_text):
     post_response = bluesky.img_post(random_qr_code["image"], 
                                      random_qr_code["bytes"], 
                                      caption=caption_text,
@@ -32,10 +34,12 @@ def bluesky_post(test_client, caption_text, random_qr_code, alt_text):
 
     test_client.delete_post(post_response.uri)
 
-def test_img_post(test_client, bluesky_post, caption_text, alt_text):
-    original_qr_num = bluesky_post["qr_number"]
+@pytest.mark.slow
+@pytest.mark.integration
+def test_img_post(test_client, bluesky_post_happy, caption_text, alt_text):
+    original_qr_num = bluesky_post_happy["qr_number"]
 
-    get_response = test_client.get_post(bluesky_post["post_rkey"])
+    get_response = test_client.get_post(bluesky_post_happy["post_rkey"])
     response_image = get_response.value.embed.images[0]
     blob_ref = response_image.image.ref.link
     repo = test_client.me.did
@@ -48,12 +52,72 @@ def test_img_post(test_client, bluesky_post, caption_text, alt_text):
     assert response_image.alt == alt_text
     assert decoded_qr_num == original_qr_num
 
+@pytest.fixture
+def caption_too_many():
+    return 5 * "Bluesky has a grapheme limit of 300 this fixture exceeds that"
+
+@pytest.fixture
+def bluesky_post_too_many(test_client, caption_too_many, dummy_image, alt_text):
+    post_response = bluesky.img_post(dummy_image["image"],
+                                     dummy_image["bytes"],
+                                     caption=caption_too_many,
+                                     alt_text=alt_text,
+                                     client=test_client)
+    post_rkey = post_response.uri.split('/')[-1]
+
+    yield {
+        "post_rkey": post_rkey,
+        "image_ref": post_response
+    }
+
+    test_client.delete_post(post_response.uri)
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.driftdetect
+def test_caption_exceeds_character_limit_on_api(test_client, caption_too_many, 
+                                         dummy_image, alt_text):
+    # TODO: Call API directly here for drift-detection
+    with pytest.raises(BadRequestError):
+        bluesky.img_post(dummy_image["image"],
+                         dummy_image["bytes"],
+                         caption=caption_too_many,
+                         alt_text=alt_text,
+                         client=test_client)
+        
+def test_caption_exceeds_character_limit(caption_too_many, dummy_image, alt_text):
+    # TODO: Call API directly here for drift-detection
+    with pytest.raises(ValueError):
+        bluesky.img_post(dummy_image["image"],
+                         dummy_image["bytes"],
+                         caption=caption_too_many,
+                         alt_text=alt_text)
+
+@pytest.mark.parametrize("text,expected", [
+    ("", 0),
+    ("a", 1),
+    ("hello", 5),
+    ("á", 1),
+    ("mañana", 6),
+    ("🇺🇸", 1),
+    ("👨‍👩‍👧‍👦", 1),
+    ("👍🏽", 1),
+    ("e\u0301e", 2),
+    ("👩‍❤️‍💋‍👩", 1),
+    ("👩🏽‍🚒", 1),
+    ("🤦🏽‍♂️", 1),
+    ("👨‍👨‍👦", 1),
+    ("🧑‍🔧🧑‍🔬", 2),
+    ("🏳️‍🌈", 1),
+])
+def test_grapheme_len(text, expected):
+    assert bluesky.grapheme_len(text) == expected
+
 # Test TODO list:
 # - Empty caption and alt text
 # - Custom aspect ratio
 # - Invalid aspect ratio
 # - image size beyond limits
 # - character amount beyond limits
-# - Multiple posts in succession
 # - Client auth error handled gracefully
 # - Missing/truncated bytes

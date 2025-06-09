@@ -13,7 +13,10 @@ def test_decode_qr_fails_on_non_qr_image(dummy_image):
         decode_qr_from_bytes(image_bytes)
 
 def test_qr_round_trip_success():
-    """A randomly generated QR code's seed should match its decoded number."""
+    """
+    Test of test logic.
+    A randomly generated QR code's seed should match its decoded number.
+    """
     qr = generate_random_qr()
     original = qr["number"]
     decoded = decode_qr_from_bytes(qr["bytes"])

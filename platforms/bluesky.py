@@ -1,8 +1,10 @@
 import os
 from dotenv import load_dotenv
+import regex
 from atproto import Client, models
 
 APP_ENV = os.getenv('APP_ENV', 'test')
+MAX_BLUESKY_CAPTION_GRAPHEMES = 300
 
 if APP_ENV == 'prod':
     load_dotenv('.env', override=True)
@@ -14,6 +16,13 @@ def get_client():
     client.login(os.getenv('BLUESKY_USERNAME'), 
                  os.getenv('BLUESKY_APP_PASSWORD'))
     return client
+
+def grapheme_len(text):
+    """
+    Returns grapheme count for text string.
+    A grapheme a piece of text percieved by human to be a single character.
+    """
+    return len(regex.findall(r'\X', text))
 
 def img_post(pillow_img, 
              image_bytes,
@@ -39,6 +48,9 @@ def img_post(pillow_img,
     Returns:
         atproto.models.AppBskyFeedPost.Response: The response from the Bluesky post request.
     """
+    if grapheme_len(caption) > MAX_BLUESKY_CAPTION_GRAPHEMES:
+        raise ValueError(f"Caption exceeds {MAX_BLUESKY_CAPTION_GRAPHEMES} grapheme limit imposed by Bluesky API.")
+
     if not client:
         client = get_client()
     
